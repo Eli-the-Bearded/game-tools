@@ -28,7 +28,10 @@
 
 use strict;
 use warnings;
-use vars qw( @colnames %istats %lstats %nstats $stime $ltime $ntime $final );
+use vars qw( @colnames %istats %lstats %nstats $stime $ltime $ntime $final
+	     $w $progname );
+
+$progname = $0;
 
 if(@ARGV) {
   $_ = join(' ', @ARGV);
@@ -42,10 +45,13 @@ if(@ARGV) {
   $_ = <STDIN>;
 }
 
+# w is width for column names in printf()
+$w = 4;
 while(/\d/) {
   if (s/^\s*(-?\d[\d_,.]*)\s*([a-z]\S*)//i) {
     push(@colnames, $2);
     $istats{$2} = $lstats{$2} = clean($1);
+    if(length($2) > $w) { $w = length($2); }
   } else {
     print "Didn't parse: $_\n";
     exit;
@@ -85,7 +91,6 @@ while( (print "Next: "), defined($_ = <STDIN>) ) {
 }
 print "\n";
 
-print "\nFINAL\n";
 showfinal();
 
 sub updatecol {
@@ -103,15 +108,82 @@ sub updatecol {
   }
 }
 
+# always shows changed since START, maybe show changed from
+# last at some point, only showing change from last would
+# make typos in numbers a much bigger deal
 sub showchanged {
   print "\n";
   my $diff;
   my $sec;
-  my $htime;
-  my $unit;
   my $first;
 
   $sec  = $ntime - $stime;
+
+  $first = showin($sec);
+
+  for my $cname (@colnames) {
+    if(exists($nstats{$cname})) {
+      if($istats{$cname} != $nstats{$cname}) {
+	print $first; $first = '';
+
+        $diff = $nstats{$cname} - $istats{$cname};
+        printf "%-${w}s  %10s change; %7.2f per second\n",
+	        $cname, show($diff), ($diff/$sec);
+      }
+      $lstats{$cname} = $nstats{$cname};
+    }
+  }
+  undef(%nstats);
+  $ltime = $ntime;
+  print "\n";
+}
+
+# always show stats per hour and stats per second, for better
+# comparisions between runs.
+sub showfinal {
+  my $diff;
+  my $sec;
+  my $punit;
+  my $unit = 'hour';
+  my $mult = 3600;
+  my $cmd = $progname;
+
+  $sec  = $ntime - $stime;
+  print "\nFINAL\n\n" . showin($sec);
+
+  if($sec < 2) {	# don't let be zero
+    $sec = 1;
+  }
+
+  for my $cname (@colnames) {
+    $cmd .= " $lstats{$cname}$cname";
+
+    if($istats{$cname} == $lstats{$cname}) {
+      printf "%-${w}s            NO change; still %s\n",
+		 $cname,                         show($istats{$cname});
+    } else {
+      $diff = $lstats{$cname} - $istats{$cname};
+      # %13s will let "+1,076,947.73" fit nicely
+      printf "%-${w}s %13s change; %12s p/%s; %6s p/s\n",
+	        $cname, show($diff,"signed"),
+				     show(abs(($diff/$sec))*$mult),
+				         $unit, show(abs($diff/$sec));
+    }
+  }
+  # 870 is 14m30s, which properly rounds to fifteen minutes
+  if($sec < 870) {
+    print "---------------------------------------------\n";
+    print "Under fifteen minutes, stats per hour dubious\n";
+    print "---------------------------------------------\n";
+  }
+  print "\n";
+  print "Continue where you left off with\n  $cmd\n";
+}
+
+sub showin {
+  my $sec = shift;
+  my $htime;
+  my $unit;
 
   if($sec < 2) {	# don't let be zero
     $sec = 1;
@@ -128,72 +200,39 @@ sub showchanged {
     $unit = 'seconds';
   }
 
-  $first = sprintf "In %d %s:\n", $htime, $unit;
-
-  for my $cname (@colnames) {
-    if(exists($nstats{$cname})) {
-      if($istats{$cname} != $nstats{$cname}) {
-	print $first; $first = '';
-
-        $diff = $nstats{$cname} - $istats{$cname};
-        printf "%-8s  %8s change; %7.2f per second\n",
-	        $cname, show($diff), ($diff/$sec);
-      }
-      $lstats{$cname} = $nstats{$cname};
-    }
-  }
-  undef(%nstats);
-  $ltime = $ntime;
-  print "\n";
+  return sprintf "In about %d %s (%s seconds):\n",
+			   $htime,
+			      $unit,
+				 show($sec);
 }
 
-sub showfinal {
-  print "\n";
-  my $diff;
-  my $sec;
-  my $punit;
-  my $unit = 'HOUR';
-  my $mult = 3600;
-  my $cmd = 'stat-timer';
-
-  $sec  = $ntime - $stime;
-
-  if($sec < 2) {	# don't let be zero
-    $sec = 1;
-  }
-  if($sec < 900) {
-    print "Under fifteen minutes, showing stats per minute.\n";
-    $unit = 'MINUTE';
-    $mult = 60;
-  }
-
-  for my $cname (@colnames) {
-    $cmd .= " $lstats{$cname}$cname";
-
-    if($istats{$cname} == $lstats{$cname}) {
-      printf "%-8s  NO CHANGE\n", $cname;
-    } else {
-      $diff = $lstats{$cname} - $istats{$cname};
-      printf "%-8s  %8s change; %s per %s\n",
-	        $cname, show($diff), show(($diff/$sec)*$mult), $unit;
-    }
-  }
-  print "\n";
-  print "Continue where you left off with\n  $cmd\n";
-}
-
+# remove commas from American human readable numbers or underscores from
+# perl-style human readable numbers
 sub clean {
   my $n = shift;
   $n =~ tr:,_::d;
   $n;
 }
 
+# format a number for printing,
+# include optional second arg evaluating to true to force a sign
 sub show {
-  my $n = shift;
+  my $n    = shift;
+  my $sign = shift;
+  if ($sign) {
+    if ($n < 0) {
+      $sign = '-';
+      $n *= -1;
+    } else {
+      $sign = '+';
+    }
+  } else {
+    $sign = '';
+  }
   if ($n =~ /\./) {
     $n = sprintf '%3.2f', $n;
   }
   # commify() from perlfaq
   1 while $n =~ s/^([-+]?\d+)(\d{3})/$1,$2/;
-  $n;
+  "$sign$n";
 }
