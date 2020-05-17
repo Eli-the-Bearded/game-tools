@@ -1,34 +1,46 @@
 #!/usr/local/bin/perl-latest
 #
 # A tool for helping track game stat changes over time.
-# Set it up with a list of initial stats then you can
-# enter changes and this times how long it was since the start
-# to give progress over time. On the secondary lines you can
-# enter values in the same order (without needing to enter all
-# values) or enter values with type to skip some or re-order them.
-# 
-# Say you have initial values of: 12,123 xp 121 gold 18 gems
-# Every so often you could enter just the new xp: 13700
-#                                                 14421
-#                                                 15638
-# And less frequently enter all the values: 16220 422 22
-# Or after a rarer event, like collecting an item just enter it: 25 gems
-# Then at the end you know how much xp, gold, and gems you got per second.
 #
-# This lets you compare strategies over time.
+# Set it up with a list of initial stats then you can enter changes and this
+# times how long it was since the start to give progress over time. This set up
+# can be done on command line or after starting the program.
+#
+# Then on subsequent prompts you can enter values in the same order (without
+# needing to enter all values) or enter values with type to skip some or
+# re-order them.
+# 
+# Say you have initial values of                : 12,123 xp 121 gold 18 gems
+# Every so often you could enter just the new xp: 13700
+#                                               : 14421
+#                                               : 15638
+# And less frequently enter all the values      : 16220 422 22
+# Or just update a single column                : 25 gems
+# 
+# Then at the end you know how much xp, gold, and gems you got per
+# unit of time. The final stats will be shown per second and per
+# minute (under 15 minutes used) or per hour. Additionally, a
+# command line to restart with final values is given.
+#
+# This lets you easily compare time efficiency of strategies.
 #
 # 4 May 2020
 
 use strict;
 use warnings;
-use vars qw( @colnames %istats %lstats %nstats $stime $ltime $ntime );
+use vars qw( @colnames %istats %lstats %nstats $stime $ltime $ntime $final );
 
-print "Enter initial stats and names to track. Format is any number of\n";
-print "numbers followed by optional white space followed by a column name.\n";
-print "Column names should start with a letter. Column names cannot contain\n";
-print "whitespace, but hyphens, underscores, etc okay. Eg:\n";
-print "       10,991 xp  50gold 10.2 lbs-meat -42 tea \n\nStarting: ";
-$_ = <STDIN>;
+if(@ARGV) {
+  $_ = join(' ', @ARGV);
+} else {
+  print "Enter initial stats and names to track. Format is any number of\n" .
+    "numbers followed by optional white space followed by a column name.\n" .
+    "Column names should start with a letter. Column names cannot contain\n" .
+    "whitespace, but hyphens, underscores, etc okay. Eg:\n" .
+    "       10,991 xp  50gold 10.2 lbs-meat -42 tea\n" .
+    "\nStarting: ";
+  $_ = <STDIN>;
+}
 
 while(/\d/) {
   if (s/^\s*(-?\d[\d_,.]*)\s*([a-z]\S*)//i) {
@@ -44,8 +56,9 @@ $stime = time();
 $" = ", ";
 print "\nOkay, have [@colnames] set up.\n";
 print "Changed values can now be entered without names if column order\n";
-print "matches or with names if out of order.\n";
-print "Starting at " . scalar localtime($stime) . "\n\n";
+print "matches or with names if out of order. Use <space>! after values\n";
+print "to indicate final set of numbers.\n";
+print "Starting timer at " . scalar localtime($stime) . "\n\n";
 
 
 while( (print "Next: "), defined($_ = <STDIN>) ) {
@@ -56,8 +69,10 @@ while( (print "Next: "), defined($_ = <STDIN>) ) {
 
     if (s/^(-?\d[\d_,.]*)\s*([a-z]\S*)//) {
       updatecol($2, $1);
-    } elsif (s/^(-?\d[\d_,.]*)\s+($|[-\d_,.])/$2/) {
+    } elsif (s/^(-?\d[\d_,.]*)\s+($|[-\d_,.!])/$2/) {
       updatecol($colnames[$c], $1);
+    } elsif (s/^\s*!//) {
+      $final = 1;
     } elsif (s/^(\S+)//) {
       print "Can't understand col-value $1\n";
     }
@@ -66,12 +81,12 @@ while( (print "Next: "), defined($_ = <STDIN>) ) {
   }
 
   showchanged();
+  last if ($final);
 }
 print "\n";
 
-copylstats();
 print "\nFINAL\n";
-showchanged();
+showfinal();
 
 sub updatecol {
   my $cname = shift;
@@ -85,12 +100,6 @@ sub updatecol {
     push(@colnames, $cname);
   } else {
     $nstats{$cname} = $cval;
-  }
-}
-
-sub copylstats {
-  for my $cname (@colnames) {
-    $nstats{$cname} = $lstats{$cname};
   }
 }
 
@@ -138,6 +147,41 @@ sub showchanged {
   print "\n";
 }
 
+sub showfinal {
+  print "\n";
+  my $diff;
+  my $sec;
+  my $punit;
+  my $unit = 'HOUR';
+  my $mult = 3600;
+  my $cmd = 'stat-timer';
+
+  $sec  = $ntime - $stime;
+
+  if($sec < 2) {	# don't let be zero
+    $sec = 1;
+  }
+  if($sec < 900) {
+    print "Under fifteen minutes, showing stats per minute.\n";
+    $unit = 'MINUTE';
+    $mult = 60;
+  }
+
+  for my $cname (@colnames) {
+    $cmd .= " $lstats{$cname}$cname";
+
+    if($istats{$cname} == $lstats{$cname}) {
+      printf "%-8s  NO CHANGE\n", $cname;
+    } else {
+      $diff = $lstats{$cname} - $istats{$cname};
+      printf "%-8s  %8s change; %s per %s\n",
+	        $cname, show($diff), show(($diff/$sec)*$mult), $unit;
+    }
+  }
+  print "\n";
+  print "Continue where you left off with\n  $cmd\n";
+}
+
 sub clean {
   my $n = shift;
   $n =~ tr:,_::d;
@@ -146,6 +190,9 @@ sub clean {
 
 sub show {
   my $n = shift;
+  if ($n =~ /\./) {
+    $n = sprintf '%3.2f', $n;
+  }
   # commify() from perlfaq
   1 while $n =~ s/^([-+]?\d+)(\d{3})/$1,$2/;
   $n;
