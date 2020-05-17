@@ -1,0 +1,152 @@
+#!/usr/local/bin/perl-latest
+#
+# A tool for helping track game stat changes over time.
+# Set it up with a list of initial stats then you can
+# enter changes and this times how long it was since the start
+# to give progress over time. On the secondary lines you can
+# enter values in the same order (without needing to enter all
+# values) or enter values with type to skip some or re-order them.
+# 
+# Say you have initial values of: 12,123 xp 121 gold 18 gems
+# Every so often you could enter just the new xp: 13700
+#                                                 14421
+#                                                 15638
+# And less frequently enter all the values: 16220 422 22
+# Or after a rarer event, like collecting an item just enter it: 25 gems
+# Then at the end you know how much xp, gold, and gems you got per second.
+#
+# This lets you compare strategies over time.
+#
+# 4 May 2020
+
+use strict;
+use warnings;
+use vars qw( @colnames %istats %lstats %nstats $stime $ltime $ntime );
+
+print "Enter initial stats and names to track. Format is any number of\n";
+print "numbers followed by optional white space followed by a column name.\n";
+print "Column names should start with a letter. Column names cannot contain\n";
+print "whitespace, but hyphens, underscores, etc okay. Eg:\n";
+print "       10,991 xp  50gold 10.2 lbs-meat -42 tea \n\nStarting: ";
+$_ = <STDIN>;
+
+while(/\d/) {
+  if (s/^\s*(-?\d[\d_,.]*)\s*([a-z]\S*)//i) {
+    push(@colnames, $2);
+    $istats{$2} = $lstats{$2} = clean($1);
+  } else {
+    print "Didn't parse: $_\n";
+    exit;
+  }
+}
+
+$stime = time();
+$" = ", ";
+print "\nOkay, have [@colnames] set up.\n";
+print "Changed values can now be entered without names if column order\n";
+print "matches or with names if out of order.\n";
+print "Starting at " . scalar localtime($stime) . "\n\n";
+
+
+while( (print "Next: "), defined($_ = <STDIN>) ) {
+  $ntime = time();
+  my $c = 0;
+  while( length($_) ) {
+    s/^\s+//;
+
+    if (s/^(-?\d[\d_,.]*)\s*([a-z]\S*)//) {
+      updatecol($2, $1);
+    } elsif (s/^(-?\d[\d_,.]*)\s+($|[-\d_,.])/$2/) {
+      updatecol($colnames[$c], $1);
+    } elsif (s/^(\S+)//) {
+      print "Can't understand col-value $1\n";
+    }
+
+    $c++;
+  }
+
+  showchanged();
+}
+print "\n";
+
+copylstats();
+print "\nFINAL\n";
+showchanged();
+
+sub updatecol {
+  my $cname = shift;
+  my $cval  = shift;
+  
+  $cval = clean($cval);
+
+  if(!exists $istats{$cname}) {
+    warn "Warning: $cname is a new column\n";
+    $istats{$cname} = $lstats{$cname} = $nstats{$cname} = $cval;
+    push(@colnames, $cname);
+  } else {
+    $nstats{$cname} = $cval;
+  }
+}
+
+sub copylstats {
+  for my $cname (@colnames) {
+    $nstats{$cname} = $lstats{$cname};
+  }
+}
+
+sub showchanged {
+  print "\n";
+  my $diff;
+  my $sec;
+  my $htime;
+  my $unit;
+  my $first;
+
+  $sec  = $ntime - $stime;
+
+  if($sec < 2) {	# don't let be zero
+    $sec = 1;
+    $htime = 1;
+    $unit = 'second';
+  } elsif ($sec > 300 and $sec < 7200) {
+    $htime = int($sec / 60);
+    $unit = 'minutes';
+  } elsif ($sec >= 7200) {
+    $htime = int($sec / 3600);
+    $unit = 'hours';
+  } else {
+    $htime = $sec;
+    $unit = 'seconds';
+  }
+
+  $first = sprintf "In %d %s:\n", $htime, $unit;
+
+  for my $cname (@colnames) {
+    if(exists($nstats{$cname})) {
+      if($istats{$cname} != $nstats{$cname}) {
+	print $first; $first = '';
+
+        $diff = $nstats{$cname} - $istats{$cname};
+        printf "%-8s  %8s change; %7.2f per second\n",
+	        $cname, show($diff), ($diff/$sec);
+      }
+      $lstats{$cname} = $nstats{$cname};
+    }
+  }
+  undef(%nstats);
+  $ltime = $ntime;
+  print "\n";
+}
+
+sub clean {
+  my $n = shift;
+  $n =~ tr:,_::d;
+  $n;
+}
+
+sub show {
+  my $n = shift;
+  # commify() from perlfaq
+  1 while $n =~ s/^([-+]?\d+)(\d{3})/$1,$2/;
+  $n;
+}
