@@ -1,0 +1,90 @@
+$ perl ../stat-timer 40,582 xp 207 bonemeal 28,395 gold
+
+Okay, have [xp, bonemeal, gold] set up.
+Changed values can now be entered without names if column order
+matches or with names if out of order. Use <space>! after values
+to indicate final set of numbers.
+Starting timer at Sun May 17 17:49:10 2020
+
+Next: 43025 205
+
+In about 193 seconds (193 seconds):
+xp             2,443 change;   12.66 per second
+bonemeal          -2 change;   -0.01 per second
+
+Next: 44421 203
+
+In about 297 seconds (297 seconds):
+xp             3,839 change;   12.93 per second
+bonemeal          -4 change;   -0.01 per second
+
+Next: 45468 201
+
+In about 7 minutes (420 seconds):
+xp             4,886 change;   11.63 per second
+bonemeal          -6 change;   -0.01 per second
+
+Next: 47213 28434 gold
+
+In about 8 minutes (519 seconds):
+xp             6,631 change;   12.78 per second
+gold              39 change;    0.08 per second
+
+Next: 200bonemeal
+
+In about 9 minutes (568 seconds):
+bonemeal          -7 change;   -0.01 per second
+
+Next: 47911
+
+In about 9 minutes (593 seconds):
+xp             7,329 change;   12.36 per second
+
+Next: 48260
+
+In about 10 minutes (623 seconds):
+xp             7,678 change;   12.32 per second
+
+Next: 48269 199
+
+In about 10 minutes (642 seconds):
+xp             7,687 change;   11.97 per second
+bonemeal          -8 change;   -0.01 per second
+
+Next: 5005 05 28457gold
+
+In about 12 minutes (743 seconds):
+xp             9,423 change;   12.68 per second
+gold              62 change;    0.08 per second
+
+Next: 51052 197
+
+In about 13 minutes (830 seconds):
+xp            10,470 change;   12.61 per second
+bonemeal         -10 change;   -0.01 per second
+
+Next: 52448 196 28473
+
+In about 15 minutes (918 seconds):
+xp            11,866 change;   12.93 per second
+bonemeal         -11 change;   -0.01 per second
+gold              78 change;    0.08 per second
+
+Next: 52797 28473 6gold !
+
+In about 15 minutes (959 seconds):
+xp            12,215 change;   12.74 per second
+gold              81 change;    0.08 per second
+
+
+
+FINAL
+
+In about 15 minutes (959 seconds):
+xp             +12,215 change;    45,854.01 p/hour;  12.74 p/s
+bonemeal           -11 change;        41.29 p/hour;   0.01 p/s
+gold               +81 change;       304.07 p/hour;   0.08 p/s
+
+Continue where you left off with
+  ../stat-timer 52797xp 196bonemeal 28476gold
+$ 

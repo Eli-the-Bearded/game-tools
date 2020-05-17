@@ -1,0 +1,92 @@
+
+Here is a recorded session with `stat-timer` showing how it is meant to
+be used for periodic updates. This is a level 56 character fighting in
+"The Graveyard" in Andor's Trail. I add updates with taking health
+potions ("bonemeal") or between waves of zombies when I can check my
+inventory for gold.
+
+```
+FINAL
+
+In about 15 minutes (959 seconds):
+xp             +12,215 change;    45,854.01 p/hour;  12.74 p/s
+bonemeal           -11 change;        41.29 p/hour;   0.01 p/s
+gold               +81 change;       304.07 p/hour;   0.08 p/s
+
+Continue where you left off with
+  ../stat-timer 52797xp 196bonemeal 28476gold
+```
+
+Compare the graveyard "final" numbers to what I was doing at level 34
+against "gournauds", where I was using no healing potions but not
+tracking gold. Some output from earilier versions of stat-timer:
+
+Trying "Shadow of the slayer" (2 handed axe) (pretty good)
+------
+
+(circa 16 minutes)
+```
+xp          17,973 change; 62,154.47 per HOUR  (circa 18 per second)
+gold           729 change; 2,521.04 per HOUR
+meat            17 change; 58.79 per HOUR
+shadow-axe  NO CHANGE
+lvl       NO CHANGE
+
+Continue where you left off with
+  stat-timer 20252xp 25034gold 17meat 1shadow-axe 34lvl
+```
+
+Trying "Skullcrusher" (2 handed hammer) (very nice)
+------
+
+(circa 16 minutes)
+```
+xp          21,182 change; 76,947.73 per HOUR;   21.37 per second
+gold         1,314 change; 4,773.36 per HOUR;    1.33 per second
+meat             9 change; 32.69 per HOUR;    0.01 per second
+skullcrusher  NO CHANGE
+lvl       NO CHANGE
+```
+
+Trying "Flagstone's pride" + shield (pretty good)
+------
+
+```
+In about 157 seconds (157 seconds):
+xp               +3,008 change;    68,973.25 p/hour;  19.16 p/s
+flagstone            NO change; still 1
+shield               NO change; still 1
+lvl                  NO change; still 34
+
+Continue where you left off with
+  ./stat-timer 49466xp 1flagstone 1shield 34lvl
+```
+
+Trying "Sword of Shadow's rage" + shield (pretty good)
+------
+
+```
+In about 194 seconds (194 seconds):
+xp                +3,562 change;    66,098.97 p/hour;  18.36 p/s
+shadowrage            NO change; still 1
+shield                NO change; still 1
+lvl                   NO change; still 34
+
+Continue where you left off with
+  ./stat-timer 53028xp 1shadowrage 1shield 34lvl
+```
+
+Trying "Blackwater poison dagger" + shield (not great)
+------
+
+```
+In about 198 seconds (198 seconds):
+xp                  +1,992 change;    36,218.18 p/hour;  10.06 p/s
+poisondagger            NO change; still 1
+shield                  NO change; still 1
+lvl                     NO change; still 34
+
+Continue where you left off with
+  ./stat-timer 55020xp 1poisondagger 1shield 34lvl
+```
+

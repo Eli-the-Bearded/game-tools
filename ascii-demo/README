@@ -1,0 +1,19 @@
+
+```
+perl ../asciimapper --demo demo-map.art
+```
+
+That creates the ascii art map `demo-map.art`, a key file for the map
+`demo-map.key`, then runs the `asciimapper` tool over those to create
+the IFM fle `demo-map.ifm`.
+
+Next, after you have compiled and instaled `ifm` (compilation worked fine
+for me on Ubuntu 18, but was not going well on NetBSD 8).
+
+```
+ifm --map -f ps -o demo-map.ps demo-map.ifm
+```
+
+to create a postscript map, `demo-map.ps`. I've converted that to 
+`demo-map.png` for ease of viewing.
+

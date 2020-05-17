@@ -1,0 +1,57 @@
+title "Demo Map";
+
+room_colour = "gray60" in style Dark;
+room "Cell"  tag R3C2 ;
+  item "paperclip";
+  task "bend paperclip";
+  task "pick lock";
+
+room "" dir n from R3C2  tag R2C2 ;
+
+room "" dir e from R2C2  tag R2C3 ;
+
+room "" dir ne from R2C3  tag R1C4 ;
+
+room "Tree" dir n from R1C4 go in tag R0C4 ;
+  item "apple";
+  task "eat apple";
+  task "open cellphone";
+  task "put battery in cellphone";
+  task "call for help";
+
+room "Round room" dir s from R1C4  tag R2C4 ;
+
+room "" dir ne from R2C4  tag R1C5 ;
+
+room "Cupboard" dir e from R1C5 go in tag R1C6 ;
+  item "cellphone battery";
+
+room "Exam room 3" dir se from R2C4  tag R3C5 ;
+  item "bed";
+  item "broken sink";
+
+room "Large sewer pipe" dir e from R3C5 go out tag R3C6 ;
+  item "filthy rags";
+
+room "Exam room 2" dir s from R2C4  tag R3C4 ;
+  item "bed";
+  item "towel";
+
+room "Exam room 1" dir sw from R2C4  tag R3C3 ;
+  item "bed";
+  item "gloves";
+
+link R2C4 to R2C3 dir w;
+
+room "" dir nw from R2C4  tag R1C3 ;
+
+room "Hole" dir n from R1C3 go out tag R0C3 style Dark;
+  item "flashlight";
+  task "search";
+  task "take flashlight";
+  task "turn on light";
+
+room "Closet" dir nw from R2C2  tag R1C1 style Dark;
+
+room "Alcove" dir sw from R1C1  tag R2C0 style Dark;
+  item "cellphone";
