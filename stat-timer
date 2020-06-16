@@ -22,6 +22,18 @@
 # minute (under 15 minutes used) or per hour. Additionally, a
 # command line to restart with final values is given.
 #
+# Non-data entry commands (enter alone):
+#	p			pause the timer until unpause
+#	pause			same as "p"
+#	show			show all values (can be done while paused)
+#	col			show current columns (can be done while paused)
+#	u			unpause the timer
+#	unpause			same as "u"
+#
+# Special flags (enter with data entry, at end of line):
+#	!			last value, update and quit
+#	=			show all values (not just updated)
+#
 # This lets you easily compare time efficiency of strategies.
 #
 # 4 May 2020
@@ -29,7 +41,10 @@
 use strict;
 use warnings;
 use vars qw( @colnames %istats %lstats %nstats $stime $ltime $ntime $final
-	     $w $progname );
+	     $runtime $pause $w $progname );
+
+# so that fractional errors from pause don't accumulate to much
+use Time::HiRes qw( time );
 
 $progname = $0;
 
@@ -70,15 +85,47 @@ print "Starting timer at " . scalar localtime($stime) . "\n\n";
 while( (print "Next: "), defined($_ = <STDIN>) ) {
   $ntime = time();
   my $c = 0;
+  my $show = 'changed';
   while( length($_) ) {
     s/^\s+//;
 
-    if (s/^(-?\d[\d_,.]*)\s*([a-z]\S*)//) {
+    if (s/^(-?\d[\d_,.]*)\s*([a-z]\S*)//i) {
       updatecol($2, $1);
-    } elsif (s/^(-?\d[\d_,.]*)\s+($|[-\d_,.!])/$2/) {
+
+    } elsif (s/^(-?\d[\d_,.]*)\s+($|[-\d_,.!=])/$2/) {
       updatecol($colnames[$c], $1);
-    } elsif (s/^\s*!//) {
+
+    } elsif (s/^!//) {
       $final = 1;
+
+    } elsif (s/^(=|show.*)//) {
+      $show = 'all';
+
+    } elsif (s/^col.*//) {
+      $show = 'none';
+      print "Columns are [@colnames]\n";
+
+    } elsif (s/^p(a(u(s(e)?)?)?)?\b.*//) {
+      $show = 'none';
+      if($pause) {
+        print "Was already paused.\n";
+      } else {
+        $pause = $ntime;
+        if(!defined($ltime)) { $ltime = $stime; }
+        $runtime += $ntime - $ltime;
+        print "Now paused.\n";
+      }
+
+    } elsif (s/^u(n(p(a(u(s(e)?)?)?)?)?)?\b.*//) {
+      $show = 'none';
+      if($pause) {
+        $ltime = $ntime;
+        $pause = undef;
+        print "Now unpaused.\n";
+      } else {
+        print "Was not paused.\n";
+      }
+
     } elsif (s/^(\S+)//) {
       print "Can't understand col-value $1\n";
     }
@@ -86,7 +133,19 @@ while( (print "Next: "), defined($_ = <STDIN>) ) {
     $c++;
   }
 
-  showchanged();
+  if (!defined($runtime)) {
+    $runtime  = $ntime - $stime;
+    $ltime    = $ntime;
+  } elsif (!defined($pause)) {
+    $runtime += $ntime - $ltime;
+    $ltime    = $ntime;
+  }
+
+  finishupdates();
+  if ($show eq 'changed') { showchanged(); }
+  elsif ($show eq 'all')  { showall();     }
+
+  undef(%nstats);
   last if ($final);
 }
 print "\n";
@@ -117,7 +176,7 @@ sub showchanged {
   my $sec;
   my $first;
 
-  $sec  = $ntime - $stime;
+  $sec  = int($runtime);
 
   $first = showin($sec);
 
@@ -130,30 +189,36 @@ sub showchanged {
         printf "%-${w}s  %10s change; %7.2f per second\n",
 	        $cname, show($diff), ($diff/$sec);
       }
-      $lstats{$cname} = $nstats{$cname};
     }
   }
-  undef(%nstats);
-  $ltime = $ntime;
+
   print "\n";
 }
 
-# always show stats per hour and stats per second, for better
-# comparisions between runs.
-sub showfinal {
+# this used to happen as a side-effect of showchanged(), but
+# that won't work in a showall() world
+sub finishupdates() {
+  for my $cname (@colnames) {
+    if(exists($nstats{$cname})) {
+      $lstats{$cname} = $nstats{$cname};
+    }
+  }
+}
+
+# showall has the guts of old showfinal() without the finality
+# it returns a value used only in that function
+sub showall {
   my $diff;
-  my $sec;
   my $punit;
   my $unit = 'hour';
   my $mult = 3600;
-  my $cmd = $progname;
-
-  $sec  = $ntime - $stime;
-  print "\nFINAL\n\n" . showin($sec);
+  my $cmd  = '';
+  my $sec  = int($runtime);
 
   if($sec < 2) {	# don't let be zero
     $sec = 1;
   }
+  print showin($sec);
 
   for my $cname (@colnames) {
     $cmd .= " $lstats{$cname}$cname";
@@ -170,8 +235,21 @@ sub showfinal {
 				         $unit, show(abs($diff/$sec));
     }
   }
+
+  $cmd;
+}
+
+# always show stats per hour and stats per second, for better
+# comparisions between runs.
+sub showfinal {
+  my $cmd = $progname;
+
+  print "\nFINAL\n\n";
+
+  $cmd .= showall();
+
   # 870 is 14m30s, which properly rounds to fifteen minutes
-  if($sec < 870) {
+  if($runtime < 870) {
     print "---------------------------------------------\n";
     print "Under fifteen minutes, stats per hour dubious\n";
     print "---------------------------------------------\n";
